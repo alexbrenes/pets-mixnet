@@ -1,5 +1,4 @@
-import os
-import socket
+import os, sys, socket
 from dotenv import load_dotenv
 from struct import pack
 
@@ -19,6 +18,13 @@ class MixnetClient:
         packet_format= f'!I{length}s'
         packet = pack(packet_format, length, payload)
         self.s.send(packet)
+
+        if self.s.recv(2) == b'\x06':
+            print("Respuesta correcta")
+            sys.exit(0)
+        elif self.s.recv(2) == b'\x15':
+            print("Algo salió mal")
+            sys.exit(1)
     
     def __prepare_message(self, m):
         # TODO: Implement message encryption
