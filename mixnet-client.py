@@ -14,9 +14,12 @@ from dotenv import load_dotenv
 SYMMETRIC_KEY_SIZE = 256 // 8
 IV_SIZE = 128 // 8
 
-# Function to load a PK pem file 
+# Function to load a PK pem file
+
+
 def load_pem_file(path):
     return serialization.load_pem_public_key(open(path, 'rb').read(), backend=default_backend())
+
 
 class MixnetClient:
 
@@ -33,21 +36,22 @@ class MixnetClient:
         packet = pack(packet_format, payload_size, payload)
 
         self.socket.send(packet)
-    
+
     # Function to perform a hybrid encryption of a message using RSA and AES
     def hybrid_encrypt(self, plaintext, public_key):
-        # Generate PKSCS#7 padding of size AES block size 
+        # Generate PKSCS#7 padding of size AES block size
         pkcs7_padder = padding.PKCS7(AES.block_size).padder()
-        
+
         # Add the padding to the plaintext
-        padded_plaintext = pkcs7_padder.update(plaintext) + pkcs7_padder.finalize()
-        
+        padded_plaintext = pkcs7_padder.update(
+            plaintext) + pkcs7_padder.finalize()
+
         # Generate a new random AES-256 symmetric key
         key = urandom(SYMMETRIC_KEY_SIZE)
-        
+
         # Generate a new random 128 IV required for CBC mode
         iv = urandom(IV_SIZE)
-        
+
         # AES CBC Cipher
         aes_cbc_cipher = Cipher(AES(key), CBC(iv))
 
@@ -55,7 +59,8 @@ class MixnetClient:
         ciphertext = aes_cbc_cipher.encryptor().update(padded_plaintext)
 
         # Generate OAEP padding for RSA encryption
-        oaep_padding = asymmetric_padding.OAEP(mgf=asymmetric_padding.MGF1(algorithm=SHA1()), algorithm=SHA1(), label=None)
+        oaep_padding = asymmetric_padding.OAEP(mgf=asymmetric_padding.MGF1(
+            algorithm=SHA1()), algorithm=SHA1(), label=None)
 
         # Encrypt iv and symmetric AES key using RSA
         cipherkey = public_key.encrypt(iv + key, oaep_padding)
@@ -66,8 +71,8 @@ class MixnetClient:
 
 load_dotenv()
 
-mixnet_entry = getenv('MIXNET_ENTRY');
-port = int(getenv('PORT'));
+mixnet_entry = getenv('MIXNET_ENTRY')
+port = int(getenv('PORT'))
 
 client = MixnetClient(mixnet_entry, port)
 
@@ -81,4 +86,3 @@ encrypted_message_2 = client.hybrid_encrypt(encrypted_message_1, pk_mix_2)
 encrypted_message_3 = client.hybrid_encrypt(encrypted_message_2, pk_mix_1)
 
 client.send(encrypted_message_3)
-
